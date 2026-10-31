@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 📑 Universal Document RAG Assistant
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
@@ -238,3 +239,6 @@ The application will start on: `http://localhost:5000`
 3. **Out-of-Scope Query ("Information Not Found")**:
    - *Question*: "What is the capital of Mars and its temperature in 2050?"
    - *Expected Answer*: Clearly states the information was not found in the uploaded documents.
+=======
+# pdf-information-extractor-main
+>>>>>>> de283c4ebaf66e1d56ff0f6bbeaa55ee73a9ed36
