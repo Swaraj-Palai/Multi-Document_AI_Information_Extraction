@@ -1,0 +1,46 @@
+langchain==0.3.27
+langchain-community==0.3.31
+langchain_huggingface==0.3.1
+langchain_groq==0.3.8
+huggingface_hub
+pypdf
+python-docx
+docx2txt
+flask
+python-dotenv
+sentence-transformers
+faiss-cpu
+pydantic>=2.7.0
+
+# BGE-M3 multilingual embeddings
+FlagEmbedding>=1.2.10
+
+# OCR dependencies (Indra OCR + PaddleOCR backend)
+indra-ocr==1.1.2
+paddleocr
+pymupdf
+pytesseract
+Pillow
+
+# PaddlePaddle CPU (install manually with the custom index if PyPI resolution fails):
+# pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+paddlepaddle==3.2.0
+
+# Utilities
+numpy
+scikit-learn
+joblib
+tenacity
+rich
+tqdm
+charset-normalizer
+certifi
+sniffio
+distro
+requests-toolbelt
+zstandard
+jsonpatch
+SQLAlchemy
+aiohttp
+pydantic-settings
+tf-keras

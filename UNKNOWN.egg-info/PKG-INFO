@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: UNKNOWN
+Version: 0.0.0
+Requires-Dist: langchain==0.3.27
+Requires-Dist: langchain-community==0.3.31
+Requires-Dist: langchain_huggingface==0.3.1
+Requires-Dist: langchain_groq==0.3.8
+Requires-Dist: huggingface_hub
+Requires-Dist: pypdf
+Requires-Dist: flask
+Requires-Dist: python-dotenv
+Requires-Dist: sentence-transformers==5.1.1
+Requires-Dist: faiss-cpu
+Dynamic: requires-dist
