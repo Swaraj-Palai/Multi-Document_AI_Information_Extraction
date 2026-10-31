@@ -7,3 +7,15 @@ __pycache__/
 /server.pid
 /server_*.log
 /vector_db/db_faiss_medical_backup/
+/vector_db/
+/app/componenets/chat_history.db
+*.db
+*.sqlite
+*.sqlite3
+/models/
+/app/static/vendor/*.map
+.DS_Store
+Thumbs.db
+*.log
+/tmp/
+/temp/
