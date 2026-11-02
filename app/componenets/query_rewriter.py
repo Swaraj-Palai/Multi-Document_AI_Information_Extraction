@@ -1,14 +1,6 @@
 """
 Query Rewriting Module (Advanced RAG - First LLM Stage)
-
-Sits between User Query and Embedding Model in the RAG pipeline.
-Interprets the user's question and rewrites/expands it to improve
-semantic retrieval before the query is embedded and searched in the Vector DB.
-
-This implements the "extra LLM before the Embedding Model" shown in the
-reference RAG pipeline diagram.
 """
-
 from typing import Optional
 from langchain_core.prompts import PromptTemplate
 
@@ -17,30 +9,29 @@ from app.common.custom_exceptions import CustomException
 
 logger = get_logger(__name__)
 
-QUERY_REWRITE_PROMPT = """You are a query rewriting assistant for a document-based RAG system.
+QUERY_REWRITE_PROMPT = """You are an expert query optimizer for document-based RAG systems.
 
-Your task is to analyze the user's question and rewrite it into a clearer,
-more retrieval-friendly form so that semantic search over document chunks
-returns the most relevant results.
+Your task is to rewrite the user's question to maximize retrieval accuracy from a vector database.
 
-Guidelines:
-1. Preserve the original intent and meaning of the question.
-2. Make the query more specific, complete, and unambiguous.
-3. If the question is short or vague, expand it with likely related terms
-   and context that would appear in relevant documents.
-4. If the question contains multiple sub-questions, combine them into a
-   single coherent retrieval query.
-5. Do NOT answer the question. Do NOT add explanations.
-6. Return ONLY the rewritten query text, nothing else.
+Rules:
+1. Preserve the EXACT intent and core question - do not change what is being asked.
+2. Make it more specific and retrieval-friendly by adding relevant keywords that would appear in documents.
+3. For ambiguous pronouns (it, this, that), infer from context if possible, else keep them neutral.
+4. For questions about specific entities (names, numbers, dates), ensure they are explicit.
+5. For multi-part questions, keep them coherent and focused.
+6. Use natural language - optimize for semantic search with dense embeddings.
+7. DO NOT answer the question. DO NOT add explanations, reasoning, or preamble.
+8. DO NOT use quotes around your response.
+9. Return ONLY the rewritten query text.
 
 User Question:
 {question}
 
-Rewritten Query:"""
+Optimized Query for Retrieval:"""
 
 
 def get_query_rewrite_prompt_template() -> PromptTemplate:
-    """Return PromptTemplate for query rewriting (first LLM stage)."""
+    """Return PromptTemplate for query rewriting."""
     return PromptTemplate(
         template=QUERY_REWRITE_PROMPT,
         input_variables=["question"]
@@ -54,15 +45,6 @@ def rewrite_query(
 ) -> str:
     """
     Rewrite/expand the user query using an LLM to improve retrieval quality.
-
-    Args:
-        query: Raw user question.
-        llm: Initialized LLM instance (e.g. ChatGroq).
-        language: Optional target language hint for rewriting.
-
-    Returns:
-        Rewritten query string. Falls back to the original query if
-        rewriting fails or produces empty output.
     """
     if not query or not query.strip():
         return query
@@ -71,7 +53,7 @@ def rewrite_query(
         prompt = get_query_rewrite_prompt_template().format(question=query.strip())
 
         if language and language.strip().lower() not in ("", "auto"):
-            prompt = f"Respond in {language}.\n\n{prompt}"
+            prompt = f"Respond in {language}. Keep the query optimized for document retrieval.\n\n{prompt}"
 
         response = llm.invoke(prompt)
         rewritten = response.content if hasattr(response, "content") else str(response)
@@ -80,11 +62,13 @@ def rewrite_query(
         # Clean up common LLM wrappers
         if rewritten.startswith('"') and rewritten.endswith('"'):
             rewritten = rewritten[1:-1].strip()
-        if rewritten.startswith("Rewritten Query:") or rewritten.startswith("Rewritten query:"):
+        if rewritten.startswith("'") and rewritten.endswith("'"):
+            rewritten = rewritten[1:-1].strip()
+        if rewritten.startswith("Optimized Query for Retrieval:") or rewritten.startswith("Rewritten Query:") or rewritten.startswith("Rewritten query:"):
             rewritten = rewritten.split(":", 1)[-1].strip()
 
-        if not rewritten:
-            logger.warning("Query rewriting returned empty output; using original query.")
+        if not rewritten or len(rewritten) < 3:
+            logger.warning("Query rewriting returned empty/invalid output; using original query.")
             return query.strip()
 
         logger.info(f"Query rewritten: '{query.strip()}' -> '{rewritten}'")
