@@ -323,7 +323,7 @@ def chat_api():
                 from app.componenets.history import set_chat_title
                 set_chat_title(chat_id, generate_chat_title(question))
 
-        result = query_rag(question, document_ids=document_ids or None, language=language)
+        result = query_rag(question, document_ids=document_ids or None, language=language, chat_id=chat_id)
         answer = result.get("answer", "No answer found.")
         sources = result.get("sources", [])
 
@@ -345,7 +345,10 @@ def chat_api():
             "sources": sources,
             "chat_id": chat_id,
             "chat_title": (get_chat(chat_id) or {}).get("title", ""),
-            "new_chat": created_new
+            "new_chat": created_new,
+            "mode": result.get("mode", "rag"),
+            "conversation_context": result.get("conversation_context"),
+            "contextualized_question": (result.get("conversation_context") or {}).get("contextualized_question", question)
         })
 
     except Exception as e:

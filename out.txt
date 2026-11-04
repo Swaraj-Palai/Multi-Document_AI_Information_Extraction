@@ -1,0 +1,12 @@
+**Document Overview (Final_ppd_merged_merged.pdf)**  
+
+| Aspect | Details | Source |
+|--------|---------|--------|
+| **Filename** | Final_ppd_merged_merged.pdf | – |
+| **Title / Header** | “AEGIS HUB | Academic & Technical Project Report” | Source: [Final_ppd_merged_merged.pdf], Page 34 |
+| **Document Entity (as defined in the system model)** | - `id`  <br> - `operator_id`  <br> - `filename`  <br> - `status`  <br> - `size`  <br> - `created_at`  <br> - *Metadata for original file and index*  <br> - `is_private` | Source: [Final_ppd_merged_merged.pdf], Page 39 |
+| **Table of Contents** | Lists the main chapters and sections of the report, e.g., <br> 1. Introduction and Project Foundations (pages 3‑4) <br> 2. Background Research and Design Rationale (pages 5‑7) <br> 3. Requirements and Technology Stack (pages 7‑8) <br> 4. System Architecture (page 9) … | Source: [Final_ppd_merged_merged.pdf], Page 6 |
+| **Declaration Page** | - **Place:** Bhubaneswar <br> - **Date:** 26/10/2026 <br> - **Authors & Registration Numbers:** <br> • Smrutiranjan Panda – Reg.No. 2301289414 <br> • Ommprakash Sahoo – Reg.No. 2301289394 <br> • Ranjit Sharma – Reg.No. 2301289398 <br> • Sayad Akhalak Ali – Reg.No. 2301289405 | Source: [Final_ppd_merged_merged.pdf], Page 3 |
+| **Relevant Figures (illustrative of content)** | Figure 8.1 – “Pass cards for bus and movie/event tickets” <br> Figure 8.2 – “Pass status workflow based on the supplied technical notes” | Source: [Final_ppd_merged_merged.pdf], Page 26 |
+
+*No additional information about the document (e.g., version number, publisher, or ISBN) is present in the provided excerpts.*

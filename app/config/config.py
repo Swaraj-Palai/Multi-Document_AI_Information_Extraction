@@ -6,13 +6,13 @@ load_dotenv()
 # LLM Configuration
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
-LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.2"))
+LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "1000"))
 
 # Query Rewriting Configuration (First LLM Stage - before Embedding Model)
 ENABLE_QUERY_REWRITING = os.environ.get("ENABLE_QUERY_REWRITING", "true").lower() == "true"
 QUERY_REWRITE_MODEL = os.environ.get("QUERY_REWRITE_MODEL", LLM_MODEL)
-QUERY_REWRITE_TEMPERATURE = float(os.environ.get("QUERY_REWRITE_TEMPERATURE", "0.3"))
+QUERY_REWRITE_TEMPERATURE = float(os.environ.get("QUERY_REWRITE_TEMPERATURE", "0.7"))
 QUERY_REWRITE_MAX_TOKENS = int(os.environ.get("QUERY_REWRITE_MAX_TOKENS", "200"))
 
 # Embeddings & Vector Store Configuration
@@ -30,8 +30,43 @@ BGE_M3_MAX_LENGTH = int(os.environ.get("BGE_M3_MAX_LENGTH", "1024"))
 
 # Chunking & Retrieval Parameters
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1000"))
-CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "200"))
-TOP_K = int(os.environ.get("TOP_K", "4"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "500"))
+TOP_K = int(os.environ.get("TOP_K", "8"))
+
+# ---------------------------------------------------------------------------
+# Query Understanding Module (Pre-Retrieval Stage)
+# Analyzes the user's question BEFORE document retrieval and produces
+# structured retrieval instructions. Does NOT generate the final answer.
+# ---------------------------------------------------------------------------
+QUERY_UNDERSTANDING_ENABLED = os.environ.get("QUERY_UNDERSTANDING_ENABLED", "true").lower() == "true"
+QUERY_UNDERSTANDING_USE_LLM = os.environ.get("QUERY_UNDERSTANDING_USE_LLM", "false").lower() == "true"
+QUERY_UNDERSTANDING_DEFAULT_TOP_K = int(os.environ.get("QUERY_UNDERSTANDING_DEFAULT_TOP_K", str(TOP_K)))
+QUERY_UNDERSTANDING_COMPLEX_BOOST_TOP_K = int(os.environ.get("QUERY_UNDERSTANDING_COMPLEX_BOOST_TOP_K", "8"))
+
+# ---------------------------------------------------------------------------
+# General LLM (normal chat) mode
+# Lets the app behave like a normal LLM when no documents are uploaded,
+# while keeping all RAG/document-grounded behaviour unchanged when documents exist.
+# ---------------------------------------------------------------------------
+ENABLE_GENERAL_LLM = os.environ.get("ENABLE_GENERAL_LLM", "true").lower() == "true"
+GENERAL_LLM_TEMPERATURE = float(os.environ.get("GENERAL_LLM_TEMPERATURE", "0.7"))
+GENERAL_LLM_MAX_TOKENS = int(os.environ.get("GENERAL_LLM_MAX_TOKENS", "1000"))
+# When documents exist but nothing relevant is found, fall back to general LLM?
+# Default False to preserve the strict grounded "not found" behaviour.
+GENERAL_FALLBACK_WHEN_NO_MATCH = os.environ.get("GENERAL_FALLBACK_WHEN_NO_MATCH", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# Conversation-aware RAG
+# Remembers previous messages within the same chat so the app understands
+# follow-up questions and pronouns (it, this, that, they) without the user
+# repeating everything. Previous messages help understand the QUESTION;
+# uploaded documents provide the EVIDENCE for answers.
+# ---------------------------------------------------------------------------
+CONVERSATION_AWARE_ENABLED = os.environ.get("CONVERSATION_AWARE_ENABLED", "true").lower() == "true"
+CONVERSATION_AWARE_MAX_MESSAGES = int(os.environ.get("CONVERSATION_AWARE_MAX_MESSAGES", "10"))
+CONVERSATION_AWARE_MAX_TOKENS = int(os.environ.get("CONVERSATION_AWARE_MAX_TOKENS", "2000"))
+CONVERSATION_AWARE_USE_LLM = os.environ.get("CONVERSATION_AWARE_USE_LLM", "false").lower() == "true"
+CONVERSATION_AWARE_NEW_TOPIC_THRESHOLD = float(os.environ.get("CONVERSATION_AWARE_NEW_TOPIC_THRESHOLD", "0.5"))
 
 # Upload Constraints
 ALLOWED_EXTENSIONS = {"pdf", "docx"}

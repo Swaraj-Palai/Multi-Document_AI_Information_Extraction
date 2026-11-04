@@ -79,6 +79,8 @@ A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** ap
 - **Persistent Multi-Document FAISS Index**: Incremental indexing preserves previously uploaded documents so embeddings persist across restarts.
 - **Document Metadata Tracking**: Tracks `source`, `page`, `file_type`, and unique `document_id` for every chunk.
 - **Strict Grounded Answering**: Employs prompt rules ensuring the LLM relies primarily on the context, prevents hallucinations, and states when information is not found.
+- **Normal LLM (General Chat) Mode**: When no documents are uploaded, the app also behaves like a normal LLM — it answers general-knowledge questions from its own training (controlled by `ENABLE_GENERAL_LLM`). All RAG/document-grounded behavior is unchanged when documents exist.
+- **Conversation-aware RAG**: The app remembers previous messages within the same chat and resolves pronouns (it, this, that, they) and follow-ups ("explain more", "give an example", "compare it"). Conversations stay isolated, history is bounded (configurable message/token limits), the original question is preserved for answer generation, and topic shifts are detected. Previous assistant answers are never treated as facts — only uploaded documents provide evidence.
 - **Document & Page Citations**: Displays clickable/pill badges citing the exact document and page number for each retrieved answer.
 - **Persistent Chat History**: SQLite database stores chat sessions with timestamps, question, answer, and sources.
 - **Modern Responsive Web Interface**: Clean UI with real-time processing indicators, document management panel, and AJAX chat interaction.
@@ -200,9 +202,26 @@ The application will start on: `http://localhost:5000`
       "page": 5,
       "label": "agriculture.pdf (Page 5)"
     }
-  ]
+  ],
+  "chat_id": "chat_abc123",
+  "chat_title": "What is the main objective of this document?",
+  "new_chat": true,
+  "mode": "rag",
+  "conversation_context": {
+    "chat_id": "chat_abc123",
+    "original_question": "What are its advantages?",
+    "contextualized_question": "What are the advantages of the BGE-M3 multilingual embedding model?",
+    "references_resolved": ["its -> BGE-M3"],
+    "is_follow_up": true,
+    "topic_shift_detected": false,
+    "context_used": true,
+    "resolution_method": "rule-based"
+  },
+  "contextualized_question": "What are the advantages of the BGE-M3 multilingual embedding model?"
 }
 ```
+- `mode` is `"rag"` when the answer is grounded in uploaded documents, or `"general"` when no documents are uploaded and the app answers like a normal LLM from its own training (controlled by `ENABLE_GENERAL_LLM`).
+- `conversation_context` contains the resolved references, follow-up detection, and the contextualized question used for retrieval. The original question is always preserved for final answer generation.
 
 ### 3. List Indexed Documents
 - **URL**: `GET /documents`
