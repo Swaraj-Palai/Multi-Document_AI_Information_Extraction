@@ -26,6 +26,15 @@ Pillow
 # pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 paddlepaddle==3.2.0
 
+# Email parsing
+email
+email-validator
+
+# Archive handling
+py7zr
+rarfile
+lzma
+
 # Utilities
 numpy
 scikit-learn
@@ -44,3 +53,8 @@ SQLAlchemy
 aiohttp
 pydantic-settings
 tf-keras
+python-magic
+
+# Media processing (optional - speech-to-text)
+# ffmpeg (system requirement for audio/video)
+# whisper (optional for audio transcription)

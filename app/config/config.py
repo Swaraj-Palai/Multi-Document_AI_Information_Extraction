@@ -69,8 +69,45 @@ CONVERSATION_AWARE_USE_LLM = os.environ.get("CONVERSATION_AWARE_USE_LLM", "false
 CONVERSATION_AWARE_NEW_TOPIC_THRESHOLD = float(os.environ.get("CONVERSATION_AWARE_NEW_TOPIC_THRESHOLD", "0.5"))
 
 # Upload Constraints
-ALLOWED_EXTENSIONS = {"pdf", "docx"}
-MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB limit
+# Universal document support: text, office, images, archives, email, e-books,
+# audio/video, ML models, and more.
+# Add or remove extensions here to control what the app accepts.
+ALLOWED_EXTENSIONS = {
+    # ---- PDF & Word ----
+    "pdf", "docx",
+    # ---- Plain text / markup / data ----
+    "txt", "md", "rtf",
+    "csv", "tsv",
+    "json", "xml",
+    "html", "htm",
+    "yaml", "yml",
+    "toml",
+    "ini",
+    "log",
+    "sql",
+    # ---- E-books ----
+    "epub",
+    "mobi", "azw3", "fb2",
+    # ---- OpenDocument ----
+    "odt", "odp", "ods",
+    # ---- Office (Word) ----
+    "doc", "docm", "dotx",
+    # ---- Office (PowerPoint) ----
+    "pptx", "ppt", "pptm", "ppsx",
+    # ---- Office (Excel) ----
+    "xlsx", "xls", "xlsm", "xlsb",
+    # ---- Images (OCR) ----
+    "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp",
+    # ---- Archives ----
+    "zip", "rar", "7z", "tar", "gz",
+    # ---- Email ----
+    "eml", "msg", "mbox", "pst",
+    # ---- XPS ----
+    "xps",
+    # ---- ML Models (binary metadata) ----
+    "h5", "pt", "pth", "onnx", "gguf", "tflite",
+}
+MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB limit for broader file types
 
 # OCR Configuration (Indra OCR / PaddleOCR backend)
 OCR_ENABLED = os.environ.get("OCR_ENABLED", "true").lower() == "true"

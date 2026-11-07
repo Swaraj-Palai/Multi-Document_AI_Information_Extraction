@@ -83,8 +83,13 @@ _startup_warmup()
 
 
 def allowed_file(filename: str) -> bool:
-    """Validate file extension against allowed types (.pdf, .docx)."""
+    """Validate file extension against allowed universal document types."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _get_supported_extensions_list() -> str:
+    """Return a human-readable list of supported extensions."""
+    return ", ".join(sorted(ALLOWED_EXTENSIONS))
 
 
 def br_tag(value: str) -> Markup:
@@ -153,7 +158,10 @@ def index():
 @app.route("/upload", methods=["POST"])
 def upload_file():
     """
-    Handle PDF and DOCX document uploads, text extraction, chunking, and vector embedding.
+    Handle universal document uploads, text extraction, chunking, and vector embedding.
+    Supports 59+ formats: PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, images (JPG/PNG/etc),
+    archives (ZIP/RAR/7Z), email (EML/MSG/MBOX), e-books (EPUB/MOBI/FB2), Office formats,
+    ML models, and more.
     """
     is_ajax = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -178,7 +186,8 @@ def upload_file():
         return redirect(url_for("index"))
 
     if not allowed_file(file.filename):
-        error_msg = "Unsupported file type. Please upload a .pdf or .docx document."
+        supported = _get_supported_extensions_list()
+        error_msg = f"Unsupported file type. Supported formats: {supported}"
         if is_ajax:
             return jsonify({"success": False, "message": error_msg}), 400
         flash(error_msg, "error")
@@ -227,7 +236,7 @@ def upload_file():
         # Extract text & pages
         docs = load_single_document(save_path, original_filename=original_name, document_id=doc_id)
         file_ext = original_name.rsplit(".", 1)[1].lower()
-        pages_count = len(docs) if file_ext == "pdf" else "N/A"
+        pages_count = len(docs)
 
         # Detect whether OCR was used for this document
         ocr_applied = any(
@@ -276,7 +285,7 @@ def upload_file():
         # Friendly message only — strip internal CustomException details
         # (format: "message | Details: ... | File: ... | Line: ...")
         error_msg = str(e).split(" | ")[0].strip() or \
-            "Failed to process the document. Please verify it is a valid PDF/DOCX and try again."
+            "Failed to process the document. Please verify it is a valid document and try again."
         if is_ajax:
             return jsonify({"success": False, "message": error_msg}), 500
         flash(error_msg, "error")

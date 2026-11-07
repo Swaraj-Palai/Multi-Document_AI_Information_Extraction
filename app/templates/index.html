@@ -1069,15 +1069,15 @@
                     <span>📤 Upload Document</span>
                 </div>
                 <div class="upload-desc">
-                    Supports <strong>PDF</strong> and <strong>DOCX</strong> (Technical docs, research, reports, notes, etc.)
+                    Supports <strong>59+ document types</strong> (PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, images, archives, email, e-books, Office formats, ML models, and more)
                 </div>
             </div>
 
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
                 <div class="file-input-wrapper">
-                    <input type="file" name="file" id="fileInput" accept=".pdf,.docx" required>
+                    <input type="file" name="file" id="fileInput" accept=".pdf,.docx,.doc,.docm,.dotx,.txt,.md,.rtf,.csv,.tsv,.json,.xml,.html,.htm,.yaml,.yml,.toml,.ini,.log,.sql,.epub,.mobi,.azw3,.fb2,.odt,.odp,.ods,.pptx,.ppt,.pptm,.ppsx,.xlsx,.xls,.xlsm,.xlsb,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.tif,.webp,.zip,.rar,.7z,.tar,.gz,.eml,.msg,.mbox,.pst,.xps,.h5,.pt,.pth,.onnx,.gguf,.tflite,.mp3,.wav,.mp4,.mkv,.mov" required>
                     <div class="custom-file-btn" id="fileLabel">
-                        <span>📁 Choose PDF / DOCX</span>
+                        <span>📁 Choose Document (59+ formats supported)</span>
                     </div>
                 </div>
 
@@ -1102,7 +1102,7 @@
                 <div class="welcome-avatar">🤖</div>
                 <h2>Ask Questions About Your Documents</h2>
                 <p>
-                    Upload any PDF or DOCX document above. The assistant extracts content, indexes it with semantic embeddings, and answers your questions with exact document citations.
+                    Upload any document above. The assistant extracts content, indexes it with semantic embeddings, and answers your questions with exact document citations.
                 </p>
                 <div class="example-topics">
                     <span class="topic-pill">🔬 Research Papers</span>
@@ -1201,7 +1201,7 @@
     function renderDocuments(docs) {
         docCountBadge.textContent = docs.length;
         if (!docs || docs.length === 0) {
-            sidebarDocList.innerHTML = '<div class="empty-hint">No documents uploaded yet.<br>Upload a PDF or DOCX to start using the RAG assistant.</div>';
+            sidebarDocList.innerHTML = '<div class="empty-hint">No documents uploaded yet.<br>Upload any document (59+ formats) to start using the RAG assistant.</div>';
             return;
         }
         sidebarDocList.innerHTML = "";
@@ -1391,7 +1391,7 @@
         if (this.files && this.files.length > 0) {
             fileLabel.innerHTML = `<span>📄 ${this.files[0].name}</span>`;
         } else {
-            fileLabel.innerHTML = `<span>📁 Choose PDF / DOCX</span>`;
+            fileLabel.innerHTML = `<span>📁 Choose Document</span>`;
         }
     });
 
@@ -1414,7 +1414,7 @@
         e.preventDefault();
 
         if (!fileInput.files || fileInput.files.length === 0) {
-            showUploadStatus("Please select a PDF or DOCX file to upload.", "error");
+            showUploadStatus("Please select a document file to upload. Supported: 59+ formats.", "error");
             return;
         }
 
@@ -1454,7 +1454,7 @@
                 // Refresh sidebar document list (single source of truth: /documents API)
                 refreshDocuments();
                 fileInput.value = "";
-                fileLabel.innerHTML = `<span>📁 Choose PDF / DOCX</span>`;
+                fileLabel.innerHTML = `<span>📁 Choose Document (59+ formats)</span>`;
             } else {
                 showUploadStatus(escapeHtml(data.message || "Failed to process document."), "error");
             }

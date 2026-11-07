@@ -4,7 +4,15 @@ from typing import List, Optional, Tuple
 
 import pymupdf as fitz  # PyMuPDF: text-layer detection for scanned PDFs
 from langchain_core.documents import Document
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    Docx2txtLoader,
+    TextLoader,
+    UnstructuredFileLoader,
+    CSVLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredHTMLLoader,
+)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from app.common.logger import get_logger
@@ -205,8 +213,618 @@ def load_single_document(file_path: str, original_filename: Optional[str] = None
                     }
                 ))
 
+        elif ext == ".txt":
+            try:
+                loader = TextLoader(file_path, encoding="utf-8")
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "txt", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse TXT document '{display_name}'.", e)
+
+        elif ext == ".csv":
+            try:
+                loader = CSVLoader(file_path, encoding="utf-8")
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "csv", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse CSV document '{display_name}'.", e)
+
+        elif ext == ".md":
+            try:
+                loader = UnstructuredMarkdownLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "md", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        md_text = f.read()
+                    cleaned = clean_text(md_text)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": "md", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+                except Exception as e2:
+                    raise CustomException(f"Failed to parse Markdown document '{display_name}'.", e2)
+
+        elif ext == ".json":
+            try:
+                import json as _json
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = _json.load(f)
+                json_text = _json.dumps(data, indent=2, ensure_ascii=False)
+                cleaned = clean_text(json_text)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "json", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse JSON document '{display_name}'.", e)
+
+        elif ext in (".html", ".htm"):
+            try:
+                loader = UnstructuredHTMLLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "html", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        html_text = f.read()
+                    cleaned = clean_text(html_text)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": "html", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+                except Exception as e2:
+                    raise CustomException(f"Failed to parse HTML document '{display_name}'.", e2)
+
+        elif ext == ".xml":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    xml_text = f.read()
+                cleaned = clean_text(xml_text)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "xml", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse XML document '{display_name}'.", e)
+
+        elif ext == ".rtf":
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "rtf", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception:
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        rtf_text = f.read()
+                    cleaned = clean_text(rtf_text)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": "rtf", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+                except Exception as e:
+                    raise CustomException(f"Failed to parse RTF document '{display_name}'.", e)
+
+        elif ext == ".epub":
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "epub", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse EPUB document '{display_name}'.", e)
+
+        elif ext == ".odt":
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "odt", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse ODT document '{display_name}'.", e)
+
+        elif ext == ".pptx":
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "pptx", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse PPTX document '{display_name}'.", e)
+
+        elif ext in (".xlsx", ".xls"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse Excel document '{display_name}'.", e)
+
+        elif ext in (".yaml", ".yml"):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                cleaned = clean_text(content)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": ext.lstrip("."), "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse YAML document '{display_name}'.", e)
+
+        elif ext == ".toml":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                cleaned = clean_text(content)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "toml", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse TOML document '{display_name}'.", e)
+
+        elif ext == ".ini":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                cleaned = clean_text(content)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "ini", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse INI document '{display_name}'.", e)
+
+        elif ext == ".log":
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                cleaned = clean_text(content)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "log", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse LOG document '{display_name}'.", e)
+
+        elif ext == ".sql":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                cleaned = clean_text(content)
+                if cleaned:
+                    raw_docs.append(Document(
+                        page_content=cleaned,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": "sql", "document_id": doc_id,
+                                  "extraction_method": "text"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse SQL document '{display_name}'.", e)
+
+        # ---- E-books ----
+        elif ext in (".epub", ".mobi", ".azw3", ".fb2"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse e-book document '{display_name}'.", e)
+
+        # ---- OpenDocument Presentation / Spreadsheet ----
+        elif ext in (".odp", ".ods"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse OpenDocument '{display_name}'.", e)
+
+        # ---- Word legacy / macro / template ----
+        elif ext in (".doc", ".docm", ".dotx"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    cleaned = clean_text(content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+                except Exception as e2:
+                    raise CustomException(f"Failed to parse Word document '{display_name}'.", e2)
+
+        # ---- PowerPoint legacy / macro / show ----
+        elif ext in (".ppt", ".pptm", ".ppsx"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse PowerPoint document '{display_name}'.", e)
+
+        # ---- Excel macro / binary ----
+        elif ext in (".xlsm", ".xlsb"):
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse Excel document '{display_name}'.", e)
+
+        # ---- XPS ----
+        elif ext == ".xps":
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": "xps", "document_id": doc_id,
+                                      "extraction_method": "text"}
+                        ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse XPS document '{display_name}'.", e)
+
+        # ---- Images (OCR) ----
+        elif ext in (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"):
+            try:
+                if ocr_engine.is_available():
+                    ocr_results = ocr_engine.extract_pdf(file_path)
+                    for result in ocr_results:
+                        cleaned = clean_text(result.text)
+                        if cleaned:
+                            raw_docs.append(Document(
+                                page_content=cleaned,
+                                metadata={"source": display_name, "page": result.page_number,
+                                          "file_type": ext.lstrip("."), "document_id": doc_id,
+                                          "extraction_method": "ocr",
+                                          "ocr_confidence": result.confidence,
+                                          "ocr_engine": "indra"}
+                            ))
+                else:
+                    raw_docs.append(Document(
+                        page_content=f"[Image file: {display_name} - OCR engine not available]",
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": ext.lstrip("."), "document_id": doc_id,
+                                  "extraction_method": "metadata"}
+                    ))
+            except Exception as e:
+                logger.warning(f"OCR failed for image '{display_name}': {e}")
+                raw_docs.append(Document(
+                    page_content=f"[Image file: {display_name} - OCR extraction failed]",
+                    metadata={"source": display_name, "page": 1,
+                              "file_type": ext.lstrip("."), "document_id": doc_id,
+                              "extraction_method": "metadata"}
+                ))
+
+        # ---- Archives (ZIP, RAR, 7Z, TAR, GZ) ----
+        elif ext in (".zip", ".rar", ".7z", ".tar", ".gz"):
+            try:
+                import zipfile
+                import tarfile
+                extracted_texts = []
+                if ext == ".zip":
+                    with zipfile.ZipFile(file_path, 'r') as zf:
+                        for name in zf.namelist():
+                            if name.endswith('/'):
+                                continue
+                            try:
+                                data = zf.read(name)
+                                text = data.decode('utf-8', errors='ignore')
+                                cleaned = clean_text(text)
+                                if cleaned:
+                                    extracted_texts.append(f"--- File: {name} ---\n{cleaned}")
+                            except Exception:
+                                continue
+                elif ext in (".tar", ".gz"):
+                    with tarfile.open(file_path, 'r:*') as tf:
+                        for member in tf.getmembers():
+                            if member.isdir():
+                                continue
+                            try:
+                                f = tf.extractfile(member)
+                                if f is None:
+                                    continue
+                                data = f.read()
+                                text = data.decode('utf-8', errors='ignore')
+                                cleaned = clean_text(text)
+                                if cleaned:
+                                    extracted_texts.append(f"--- File: {member.name} ---\n{cleaned}")
+                            except Exception:
+                                continue
+                else:
+                    loader = UnstructuredFileLoader(file_path)
+                    pages = loader.load()
+                    for idx, page in enumerate(pages):
+                        cleaned = clean_text(page.page_content)
+                        if cleaned:
+                            raw_docs.append(Document(
+                                page_content=cleaned,
+                                metadata={"source": display_name, "page": idx + 1,
+                                          "file_type": ext.lstrip("."), "document_id": doc_id,
+                                          "extraction_method": "text"}
+                            ))
+
+                if extracted_texts:
+                    combined = "\n\n".join(extracted_texts)
+                    raw_docs.append(Document(
+                        page_content=combined,
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": ext.lstrip("."), "document_id": doc_id,
+                                  "extraction_method": "archive"}
+                    ))
+                elif not raw_docs:
+                    raw_docs.append(Document(
+                        page_content=f"[Archive file: {display_name} - no text files found]",
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": ext.lstrip("."), "document_id": doc_id,
+                                  "extraction_method": "metadata"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse archive '{display_name}'.", e)
+
+        # ---- Email (EML, MSG, MBOX, PST) ----
+        elif ext in (".eml", ".msg", ".mbox", ".pst"):
+            try:
+                import email
+                from email import policy
+                from email.parser import BytesParser
+                email_texts = []
+                if ext == ".eml":
+                    with open(file_path, "rb") as f:
+                        msg = BytesParser(policy=policy.default).parse(f)
+                    subject = msg.get("subject", "")
+                    sender = msg.get("from", "")
+                    date = msg.get("date", "")
+                    email_texts.append(f"From: {sender}")
+                    email_texts.append(f"Subject: {subject}")
+                    email_texts.append(f"Date: {date}")
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() == "text/plain":
+                                email_texts.append(part.get_content())
+                    else:
+                        email_texts.append(msg.get_content())
+                elif ext == ".mbox":
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    email_texts.append(content)
+                else:
+                    loader = UnstructuredFileLoader(file_path)
+                    pages = loader.load()
+                    for idx, page in enumerate(pages):
+                        cleaned = clean_text(page.page_content)
+                        if cleaned:
+                            raw_docs.append(Document(
+                                page_content=cleaned,
+                                metadata={"source": display_name, "page": idx + 1,
+                                          "file_type": ext.lstrip("."), "document_id": doc_id,
+                                          "extraction_method": "text"}
+                            ))
+
+                if email_texts:
+                    combined = "\n\n".join(email_texts)
+                    cleaned = clean_text(combined)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": ext.lstrip("."), "document_id": doc_id,
+                                      "extraction_method": "email"}
+                        ))
+                elif not raw_docs:
+                    raw_docs.append(Document(
+                        page_content=f"[Email file: {display_name} - no readable content]",
+                        metadata={"source": display_name, "page": 1,
+                                  "file_type": ext.lstrip("."), "document_id": doc_id,
+                                  "extraction_method": "metadata"}
+                    ))
+            except Exception as e:
+                raise CustomException(f"Failed to parse email '{display_name}'.", e)
+
+        # ---- ML Models (binary metadata) ----
+        elif ext in (".h5", ".pt", ".pth", ".onnx", ".gguf", ".tflite"):
+            try:
+                file_size = os.path.getsize(file_path)
+                raw_docs.append(Document(
+                    page_content=f"[ML Model file: {display_name} - size: {file_size} bytes - binary model, no extractable text]",
+                    metadata={"source": display_name, "page": 1,
+                              "file_type": ext.lstrip("."), "document_id": doc_id,
+                              "extraction_method": "metadata"}
+                ))
+            except Exception as e:
+                raise CustomException(f"Failed to process ML model '{display_name}'.", e)
+
+        # ---- Audio / Video (metadata only) ----
+        elif ext in (".mp3", ".wav", ".mp4", ".mkv", ".mov"):
+            try:
+                file_size = os.path.getsize(file_path)
+                raw_docs.append(Document(
+                    page_content=f"[Audio/Video file: {display_name} - size: {file_size} bytes - speech-to-text not configured]",
+                    metadata={"source": display_name, "page": 1,
+                              "file_type": ext.lstrip("."), "document_id": doc_id,
+                              "extraction_method": "metadata"}
+                ))
+            except Exception as e:
+                raise CustomException(f"Failed to process media file '{display_name}'.", e)
+
+        # ---- Universal fallback ----
         else:
-            raise CustomException(f"Unsupported file format '{ext}'. Only .pdf and .docx are supported.")
+            try:
+                loader = UnstructuredFileLoader(file_path)
+                pages = loader.load()
+                for idx, page in enumerate(pages):
+                    cleaned = clean_text(page.page_content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": idx + 1,
+                                      "file_type": ext.lstrip(".") if ext else "unknown",
+                                      "document_id": doc_id, "extraction_method": "text"}
+                        ))
+            except Exception:
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    cleaned = clean_text(content)
+                    if cleaned:
+                        raw_docs.append(Document(
+                            page_content=cleaned,
+                            metadata={"source": display_name, "page": 1,
+                                      "file_type": ext.lstrip(".") if ext else "unknown",
+                                      "document_id": doc_id, "extraction_method": "text"}
+                        ))
+                except Exception as e:
+                    raise CustomException(f"Unsupported file format '{ext}'. Unable to extract text from '{display_name}'.", e)
 
         if not raw_docs:
             raise CustomException(f"Document '{display_name}' contains no readable text content.")

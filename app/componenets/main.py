@@ -11,7 +11,7 @@ from app.componenets.vector_store import (
 )
 from app.common.logger import get_logger
 from app.common.custom_exceptions import CustomException
-from app.config.config import DATA_PATH, UPLOAD_FOLDER
+from app.config.config import DATA_PATH, UPLOAD_FOLDER, ALLOWED_EXTENSIONS
 
 logger = get_logger(__name__)
 
@@ -28,17 +28,18 @@ def inject_data() -> Optional[FAISS]:
         logger.info("No vector store found. Scanning document directories to initialize store...")
         all_chunks = []
 
+        allowed = {"." + e for e in ALLOWED_EXTENSIONS}
         for folder in [DATA_PATH, UPLOAD_FOLDER]:
             if os.path.exists(folder):
                 for filename in os.listdir(folder):
                     ext = os.path.splitext(filename)[1].lower()
-                    if ext in [".pdf", ".docx"]:
+                    if ext in allowed:
                         file_path = os.path.join(folder, filename)
                         try:
                             docs = load_single_document(file_path, original_filename=filename)
                             chunks = create_text_chunks(docs)
                             all_chunks.extend(chunks)
-                            pages_count = len(docs) if ext == ".pdf" else "N/A"
+                            pages_count = len(docs)
                             register_document_info(filename, ext.lstrip("."), pages_count, len(chunks))
                         except Exception as e:
                             logger.warning(f"Could not load initial document '{filename}': {e}")

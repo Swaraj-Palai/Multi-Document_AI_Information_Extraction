@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 📑 Universal Document RAG Assistant
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
@@ -7,7 +6,7 @@
 [![Vector Store](https://img.shields.io/badge/Vector%20Store-FAISS-purple.svg)](https://github.com/facebookresearch/faiss)
 [![LLM Acceleration](https://img.shields.io/badge/Inference-Groq%20Cloud-orange.svg)](https://groq.com/)
 
-A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** application. The system enables users to upload **PDF** and **DOCX** documents across any domain—such as research papers, agriculture reports, technical manuals, machine learning notes, business plans, or legal contracts—automatically extracts, chunks, and embeds their content, and allows users to ask questions grounded strictly in the uploaded materials with exact document and page citations.
+A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** application. The system enables users to upload **any kind of document** (PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, RTF, EPUB, ODT, PPTX, XLSX, and more) across any domain—such as research papers, agriculture reports, technical manuals, machine learning notes, business plans, or legal contracts—automatically extracts, chunks, and embeds their content, and allows users to ask questions grounded strictly in the uploaded materials with exact document and page citations.
 
 ---
 
@@ -72,7 +71,7 @@ A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** ap
 
 ## ✨ Key Features
 
-- **Generic Multi-Format Document Ingestion**: Upload any **PDF** or **DOCX** document. Seamlessly works for agriculture, science, engineering, business, law, notes, and research papers.
+- **Universal Multi-Format Document Ingestion**: Upload **any document type** — PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, RTF, EPUB, ODT, PPTX, XLSX, and more. Seamlessly works for agriculture, science, engineering, business, law, notes, and research papers.
 - **Robust Text Extraction & Fallbacks**: Utilizes `PyPDFLoader` for PDFs with 1-based page metadata, and `Docx2txtLoader` with automated `python-docx` fallback for complex DOCX tables and formatting.
 - **Configurable Text Chunking**: Chunks text via `RecursiveCharacterTextSplitter` with customizable `CHUNK_SIZE` and `CHUNK_OVERLAP`.
 - **HuggingFace Embeddings**: Uses dense 384-dimensional embeddings (`sentence-transformers/all-MiniLM-L6-v2`) cached in memory to eliminate redundant loads.
@@ -95,6 +94,20 @@ A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** ap
 - **Vector Database**: FAISS (`faiss-cpu`)
 - **LLM Inference**: `langchain-groq` (Groq Cloud API)
 - **Document Loaders**: `pypdf`, `python-docx`, `docx2txt`
+- **Database**: SQLite3
+- **Frontend**: HTML5, Vanilla CSS, Vanilla JavaScript (Fetch API)
+
+---
+
+- **Backend**: Flask 3.x, Python 3.10+
+- **RAG & Orchestration**: LangChain, LangChain-Community, LangChain-Core
+- **Embeddings**: LangChain-HuggingFace, sentence-transformers, BGE-M3
+- **Vector Database**: FAISS (faiss-cpu)
+- **LLM Inference**: langchain-groq (Groq Cloud API)
+- **Document Loaders**: pypdf, python-docx, docx2txt, unstructured, TextLoader, CSVLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, PyMuPDF
+- **OCR**: Indra OCR, PaddleOCR, PyMuPDF (PDFs, images)
+- **Email Parsing**: Standard library email module (EML/MSG/MBOX/PST)
+- **Archive Handling**: zipfile, tarfile, py7zr, rarfile
 - **Database**: SQLite3
 - **Frontend**: HTML5, Vanilla CSS, Vanilla JavaScript (Fetch API)
 
@@ -258,6 +271,4 @@ The application will start on: `http://localhost:5000`
 3. **Out-of-Scope Query ("Information Not Found")**:
    - *Question*: "What is the capital of Mars and its temperature in 2050?"
    - *Expected Answer*: Clearly states the information was not found in the uploaded documents.
-=======
-# pdf-information-extractor-main
->>>>>>> de283c4ebaf66e1d56ff0f6bbeaa55ee73a9ed36
+
