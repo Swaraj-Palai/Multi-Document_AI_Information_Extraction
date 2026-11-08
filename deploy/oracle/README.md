@@ -30,7 +30,7 @@ PaddlePaddle's current Linux CPU installation documentation states x86-64 proces
 3. Allocate no more than **2 OCPUs and 12 GB memory** total to A1 instances in the tenancy.
 4. Use the default boot volume (or another size within the shared 200 GB Always Free Block Volume allowance).
 5. Assign a public IPv4 address and configure the subnet security list / network security group to allow inbound TCP **22, 80 and 443**. Keep port 8000 private.
-6. Connect over SSH.
+6. Connect over SSH. If Ubuntu UFW is active, allow SSH, TCP 80, TCP 443 and UDP 443 in the VM firewall as well.
 
 If OCI reports out-of-host-capacity, retry a different availability domain (where available) or try again later. Do not upgrade to a paid account solely to get around capacity unless you explicitly accept possible charges.
 
@@ -58,13 +58,18 @@ Create a free DNS hostname (for example, a DuckDNS subdomain) and point its A re
 git clone --branch deploy/oracle-always-free https://github.com/Swaraj-Palai/Multi-Document_AI_Information_Extraction.git
 cd Multi-Document_AI_Information_Extraction
 cp deploy/oracle/.env.example deploy/oracle/.env
+cp deploy/oracle/.caddy.env.example deploy/oracle/.caddy.env
 ~~~
 
 Edit deploy/oracle/.env and set:
 - APP_SECRET_KEY: generate with openssl rand -hex 32.
 - GROQ_API_KEY: your Groq API key.
 - PUBLIC_HOSTNAME: the DNS hostname pointing to the VM.
+The Caddy-only settings live in deploy/oracle/.caddy.env:
+- PUBLIC_HOSTNAME: the DNS hostname pointing to the VM.
 - ACME_EMAIL: an email for certificate expiry notifications.
+
+The Groq key is not passed to the Caddy container.
 
 Never commit the filled .env file or put secrets in GitHub.
 
