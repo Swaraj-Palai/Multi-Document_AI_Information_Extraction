@@ -10,7 +10,7 @@ from langchain_core.documents import Document
 from app.componenets.embeddings import get_embedding_model
 from app.common.logger import get_logger
 from app.common.custom_exceptions import CustomException
-from app.config.config import _vector_db_path() as BASE_VECTOR_PATH, _upload_root() as BASE_UPLOAD_PATH
+from app.config.config import DB_FAISS_PATH as BASE_VECTOR_PATH, UPLOAD_FOLDER as BASE_UPLOAD_PATH
 from app.common.workspace import workspace_path
 
 logger = get_logger(__name__)
