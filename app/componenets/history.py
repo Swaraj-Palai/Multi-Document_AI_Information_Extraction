@@ -20,30 +20,6 @@ def _connect():
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return sqlite3.connect(path, timeout=30)
 
-from app.common.workspace import workspace_path
-
-
-def _db_path() -> str:
-    return workspace_path("chat_history.db", default_path=DB)
-
-
-def _connect():
-    path = _db_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    return sqlite3.connect(path, timeout=30)
-
-from app.common.workspace import workspace_path
-
-
-def _db_path() -> str:
-    return workspace_path("chat_history.db", default_path=DB)
-
-
-def _connect():
-    path = _db_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    return sqlite3.connect(path, timeout=30)
-
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
