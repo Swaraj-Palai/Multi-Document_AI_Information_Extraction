@@ -9,12 +9,13 @@ requires OCR, falling back gracefully when OCR dependencies are unavailable.
 from __future__ import annotations
 
 import os
+import io
 from dataclasses import dataclass, field
 from typing import List, Optional
 
 from app.common.logger import get_logger
 from app.common.custom_exceptions import CustomException
-from app.config.config import OCR_DPI, OCR_ENABLED, OCR_MODE, OCR_THREADS
+from app.config.config import OCR_DPI, OCR_ENABLED, OCR_MODE, OCR_THREADS, OCR_BACKEND, OCR_LANG
 
 logger = get_logger(__name__)
 
@@ -30,6 +31,7 @@ class OCRPageResult:
     lines: List[dict] = field(default_factory=list)
     blocks: List[dict] = field(default_factory=list)
     markdown: str = ""
+    engine: str = "indra"
 
 
 class OCREngine:
@@ -48,11 +50,13 @@ class OCREngine:
         threads: Optional[int] = None,
         dpi: Optional[int] = None,
         mode: Optional[str] = None,
+        backend: Optional[str] = None,
     ) -> None:
         self.enabled = OCR_ENABLED if enabled is None else enabled
         self.threads = OCR_THREADS if threads is None else threads
         self.dpi = OCR_DPI if dpi is None else dpi
         self.mode = OCR_MODE if mode is None else mode
+        self.backend = OCR_BACKEND if backend is None else backend.lower()
         self._engine = None  # None = not loaded, False = load failed
 
     # ------------------------------------------------------------------ #
@@ -65,6 +69,13 @@ class OCREngine:
 
         if self._engine is None:
             try:
+                if self.backend == "tesseract":
+                    import pytesseract  # type: ignore
+                    pytesseract.get_tesseract_version()
+                    self._engine = "tesseract"
+                    logger.info("Tesseract OCR engine initialised successfully.")
+                    return self._engine
+
                 import indra_ocr  # type: ignore
 
                 logger.info(
@@ -108,6 +119,9 @@ class OCREngine:
         if not os.path.exists(pdf_path):
             raise CustomException(f"PDF file not found: {pdf_path}")
 
+        if engine == "tesseract":
+            return self._extract_pdf_tesseract(pdf_path)
+
         results: List[OCRPageResult] = []
 
         try:
@@ -148,6 +162,7 @@ class OCREngine:
                         lines=lines,
                         blocks=blocks,
                         markdown=markdown,
+                        engine="indra",
                     )
                 )
 
@@ -161,6 +176,64 @@ class OCREngine:
             raise error_msg
 
         return results
+
+
+    def _extract_pdf_tesseract(self, pdf_path: str) -> List[OCRPageResult]:
+        """Rasterize scanned PDF pages and OCR them with the system Tesseract binary."""
+        try:
+            import fitz
+            import pytesseract
+            from PIL import Image
+            from pytesseract import Output
+
+            results: List[OCRPageResult] = []
+            with fitz.open(pdf_path) as document:
+                for page_index, page in enumerate(document):
+                    pixmap = page.get_pixmap(dpi=self.dpi, alpha=False)
+                    image = Image.open(io.BytesIO(pixmap.tobytes("png"))).convert("RGB")
+                    text = pytesseract.image_to_string(image, lang=OCR_LANG)
+                    data = pytesseract.image_to_data(
+                        image, lang=OCR_LANG, output_type=Output.DICT
+                    )
+                    lines = []
+                    confidences = []
+                    for index, word in enumerate(data.get("text", [])):
+                        value = str(word or "").strip()
+                        try:
+                            confidence = float(data["conf"][index])
+                        except (ValueError, TypeError, KeyError, IndexError):
+                            confidence = -1.0
+                        if value:
+                            lines.append({
+                                "text": value,
+                                "confidence": max(confidence, 0.0),
+                                "bounding_box": {
+                                    "left": data["left"][index],
+                                    "top": data["top"][index],
+                                    "width": data["width"][index],
+                                    "height": data["height"][index],
+                                },
+                            })
+                        if confidence >= 0:
+                            confidences.append(confidence / 100.0)
+
+                    results.append(OCRPageResult(
+                        page_number=page_index + 1,
+                        extraction_method="ocr",
+                        text=text or "",
+                        confidence=(sum(confidences) / len(confidences)) if confidences else 0.0,
+                        lines=lines,
+                        blocks=[],
+                        markdown=text or "",
+                        engine="tesseract",
+                    ))
+            return results
+        except Exception as exc:
+            error_msg = CustomException(
+                f"Tesseract OCR extraction failed for '{pdf_path}'", exc
+            )
+            logger.error(str(error_msg))
+            raise error_msg
 
 
 # Module-level singleton for convenience
