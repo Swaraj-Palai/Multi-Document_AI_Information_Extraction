@@ -8,6 +8,18 @@ from typing import List, Tuple, Any, Optional, Dict
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE_DIR, "chat_history.db")
 
+from app.common.workspace import workspace_path
+
+
+def _db_path() -> str:
+    return workspace_path("chat_history.db", default_path=DB)
+
+
+def _connect():
+    path = _db_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return sqlite3.connect(path, timeout=30)
+
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -23,7 +35,7 @@ def generate_chat_title(question: str) -> str:
 
 def create_table():
     """Create session-based chat tables and migrate legacy flat history once."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
 
     # Legacy flat table (kept so old code paths keep working)
@@ -103,7 +115,7 @@ def create_table():
 
 
 def save_chat(question: str, answer: str, sources: Optional[Any] = None):
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
 
     sources_str = ""
@@ -124,7 +136,7 @@ def save_chat(question: str, answer: str, sources: Optional[Any] = None):
 
 def get_history() -> List[Tuple]:
     """Retrieve chat history, returning tuples of (id, question, answer, time, sources)."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
 
     c.execute("""
@@ -137,7 +149,7 @@ def get_history() -> List[Tuple]:
 
 
 def delet_chat(chat_id: int):
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
     conn.commit()
@@ -145,7 +157,7 @@ def delet_chat(chat_id: int):
 
 
 def clear_history():
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute("DELETE FROM chats")
     conn.commit()
@@ -175,7 +187,7 @@ def create_chat(title: Optional[str] = None, document_ids: Optional[List[str]] =
     """Create a new chat conversation and return its record."""
     chat_id = "chat_" + uuid.uuid4().hex[:6]
     now = _now()
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute(
         "INSERT INTO conversations (chat_id, title, created_at, updated_at, document_ids) VALUES (?,?,?,?,?)",
@@ -194,7 +206,7 @@ def create_chat(title: Optional[str] = None, document_ids: Optional[List[str]] =
 
 def get_chats() -> List[Dict[str, Any]]:
     """Return all conversations ordered by most recent activity."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute(
         "SELECT chat_id, title, created_at, updated_at, document_ids FROM conversations ORDER BY updated_at DESC"
@@ -206,7 +218,7 @@ def get_chats() -> List[Dict[str, Any]]:
 
 def get_chat(chat_id: str) -> Optional[Dict[str, Any]]:
     """Return a single conversation record or None."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute(
         "SELECT chat_id, title, created_at, updated_at, document_ids FROM conversations WHERE chat_id = ?",
@@ -219,7 +231,7 @@ def get_chat(chat_id: str) -> Optional[Dict[str, Any]]:
 
 def get_messages(chat_id: str) -> List[Dict[str, Any]]:
     """Return all messages for a conversation in chronological order."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute(
         "SELECT id, role, content, sources, timestamp FROM messages WHERE chat_id = ? ORDER BY id ASC",
@@ -259,7 +271,7 @@ def save_message(chat_id: str, role: str, content: str, sources: Optional[Any] =
             else:
                 sources_str = str(sources)
 
-        conn = sqlite3.connect(DB)
+        conn = _connect()
         c = conn.cursor()
         c.execute(
             "INSERT INTO messages (chat_id, role, content, sources, timestamp) VALUES (?,?,?,?,?)",
@@ -276,7 +288,7 @@ def save_message(chat_id: str, role: str, content: str, sources: Optional[Any] =
 def set_chat_title(chat_id: str, title: str):
     """Update the chat title (used when the first question arrives)."""
     try:
-        conn = sqlite3.connect(DB)
+        conn = _connect()
         c = conn.cursor()
         c.execute("UPDATE conversations SET title = ? WHERE chat_id = ?", (title, chat_id))
         conn.commit()
@@ -292,7 +304,7 @@ def update_chat_documents(chat_id: str, document_ids: List[str]):
         if not chat:
             return
         merged = list(dict.fromkeys(list(chat.get("document_ids", [])) + list(document_ids or [])))
-        conn = sqlite3.connect(DB)
+        conn = _connect()
         c = conn.cursor()
         c.execute("UPDATE conversations SET document_ids = ? WHERE chat_id = ?", (json.dumps(merged), chat_id))
         conn.commit()
@@ -303,7 +315,7 @@ def update_chat_documents(chat_id: str, document_ids: List[str]):
 
 def delete_conversation(chat_id: str) -> bool:
     """Delete one conversation and all of its messages. Returns True if found."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute("SELECT chat_id FROM conversations WHERE chat_id = ?", (chat_id,))
     exists = c.fetchone() is not None
@@ -317,7 +329,7 @@ def delete_conversation(chat_id: str) -> bool:
 
 def clear_all_chats() -> int:
     """Delete ALL conversations and messages. Returns number of chats removed."""
-    conn = sqlite3.connect(DB)
+    conn = _connect()
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM conversations")
     count = c.fetchone()[0]
