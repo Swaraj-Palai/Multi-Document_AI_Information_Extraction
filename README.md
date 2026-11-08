@@ -368,3 +368,8 @@ For exact request fields and response structures, refer to the route handlers in
 ## License
 
 No license file was present in the repository at the time this README was updated. Check with the repository owner before reusing or distributing this project.
+
+
+## Free public deployment (Oracle Cloud)
+
+A Docker-based deployment profile is prepared for Oracle Cloud Always Free Ampere A1 ARM64. It uses BGE-M3, FAISS, Groq, per-browser isolated storage and Tesseract OCR (instead of Indra/PaddleOCR on ARM64). See the [Oracle Cloud deployment guide](deploy/oracle/README.md) on the `deploy/oracle-always-free` branch.
