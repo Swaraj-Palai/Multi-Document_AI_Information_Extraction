@@ -3,8 +3,6 @@ import json
 import hashlib
 import secrets
 from datetime import timedelta
-import secrets
-from datetime import timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, g, session
 from werkzeug.utils import secure_filename
 from markupsafe import Markup
@@ -50,7 +48,6 @@ from app.config.config import (
 from app.common.logger import get_logger
 from app.common.custom_exceptions import CustomException
 from app.common.workspace import set_workspace_id, reset_workspace_id, workspace_path, workspace_root
-from app.common.workspace import set_workspace_id, reset_workspace_id, workspace_path, workspace_root
 
 load_dotenv()
 logger = get_logger(__name__)
@@ -84,33 +81,6 @@ def bind_private_workspace():
         os.utime(workspace_root(), None)
     except OSError:
         pass
-    # SQLite tables are created inside this visitor's workspace.
-    create_table()
-
-
-@app.teardown_request
-def unbind_private_workspace(_error=None):
-    token = getattr(g, "workspace_context_token", None)
-    if token is not None:
-        reset_workspace_id(token)
-
-
-@app.before_request
-def bind_private_workspace():
-    """Give each browser a signed-cookie-backed, isolated data workspace."""
-    workspace_id = session.get("workspace_id")
-    if not isinstance(workspace_id, str) or len(workspace_id) != 48 or any(c not in "0123456789abcdef" for c in workspace_id):
-        workspace_id = secrets.token_hex(24)
-        session["workspace_id"] = workspace_id
-    session.permanent = True
-    g.workspace_context_token = set_workspace_id(workspace_id)
-    os.makedirs(workspace_path("uploads", default_path=UPLOAD_FOLDER), exist_ok=True)
-    os.makedirs(workspace_root(), exist_ok=True)
-    try:
-        os.utime(workspace_root(), None)
-    except OSError:
-        pass
-    # SQLite tables are created inside this visitor's workspace.
     create_table()
 
 
@@ -292,7 +262,6 @@ def upload_file():
         stored_name = f"{doc_id}_{safe_name}"
         upload_dir = workspace_path("uploads", default_path=app.config["UPLOAD_FOLDER"])
         os.makedirs(upload_dir, exist_ok=True)
-        # Bound each browser workspace to 250 MB of uploaded source files.
         current_bytes = sum(
             os.path.getsize(os.path.join(upload_dir, name))
             for name in os.listdir(upload_dir)
