@@ -81,7 +81,9 @@ def bind_private_workspace():
         os.utime(workspace_root(), None)
     except OSError:
         pass
-    create_table()
+    workspace_db = workspace_path("chat_history.db")
+    if not os.path.exists(workspace_db):
+        create_table()
 
 
 @app.teardown_request
