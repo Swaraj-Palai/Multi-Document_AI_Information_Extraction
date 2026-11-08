@@ -1,0 +1,55 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/oracle/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_DATA_ROOT: /data
+      SESSION_COOKIE_SECURE: "true"
+      EMBEDDING_PROVIDER: bge-m3
+      EMBEDDING_MODEL: BAAI/bge-m3
+      BGE_M3_DEVICE: cpu
+      BGE_M3_BATCH_SIZE: "1"
+      OCR_ENABLED: "true"
+      OCR_BACKEND: tesseract
+      OCR_LANG: eng
+      OCR_DPI: "200"
+      MAX_UPLOAD_MB: "20"
+      WORKSPACE_TTL_DAYS: "14"
+    volumes:
+      - app_data:/data
+    expose:
+      - "8000"
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - internal
+
+volumes:
+  app_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge
