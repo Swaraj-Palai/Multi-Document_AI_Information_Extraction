@@ -30,7 +30,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     env_file:
-      - .env
+      - .caddy.env
     ports:
       - "80:80"
       - "443:443"
