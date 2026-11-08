@@ -1,0 +1,37 @@
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    APP_DATA_ROOT=/data \
+    HF_HOME=/data/huggingface \
+    TRANSFORMERS_CACHE=/data/huggingface \
+    EMBEDDING_PROVIDER=bge-m3 \
+    EMBEDDING_MODEL=BAAI/bge-m3 \
+    BGE_M3_DEVICE=cpu \
+    BGE_M3_BATCH_SIZE=1 \
+    OCR_ENABLED=true \
+    OCR_BACKEND=tesseract \
+    OCR_LANG=eng \
+    OCR_DPI=200 \
+    MAX_UPLOAD_MB=20 \
+    HOST=0.0.0.0 \
+    PORT=8000
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl libgomp1 libmagic1 tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY deploy/oracle/requirements.txt /tmp/requirements.txt
+
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.9.1" && \
+    python -m pip install --no-cache-dir -r /tmp/requirements.txt
+
+COPY . /app
+RUN mkdir -p /data && useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app /data
+USER appuser
+
+EXPOSE 8000
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", "--timeout", "300", "--graceful-timeout", "30", "--access-logfile", "-", "--error-logfile", "-", "app.application:app"]
