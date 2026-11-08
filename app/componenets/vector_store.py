@@ -10,7 +10,8 @@ from langchain_core.documents import Document
 from app.componenets.embeddings import get_embedding_model
 from app.common.logger import get_logger
 from app.common.custom_exceptions import CustomException
-from app.config.config import DB_FAISS_PATH, UPLOAD_FOLDER
+from app.config.config import _vector_db_path() as BASE_VECTOR_PATH, _upload_root() as BASE_UPLOAD_PATH
+from app.common.workspace import workspace_path
 
 logger = get_logger(__name__)
 
@@ -19,7 +20,16 @@ logger = get_logger(__name__)
 # corruption + every CPU core busy). All document mutations are serialised here.
 _DOC_MUTATION_LOCK = threading.Lock()
 
-DOCS_METADATA_FILE = os.path.join(os.path.dirname(DB_FAISS_PATH), "uploaded_docs.json")
+def _vector_db_path() -> str:
+    return workspace_path("vector_db/db_faiss", default_path=BASE_VECTOR_PATH)
+
+
+def _upload_root() -> str:
+    return workspace_path("uploads", default_path=BASE_UPLOAD_PATH)
+
+
+def _docs_metadata_file() -> str:
+    return os.path.join(os.path.dirname(_vector_db_path()), "uploaded_docs.json")
 
 
 def _now() -> str:
@@ -29,8 +39,8 @@ def _now() -> str:
 def _load_docs_registry() -> List[Dict[str, Any]]:
     """Load registry of uploaded documents."""
     try:
-        if os.path.exists(DOCS_METADATA_FILE):
-            with open(DOCS_METADATA_FILE, "r", encoding="utf-8") as f:
+        if os.path.exists(_docs_metadata_file()):
+            with open(_docs_metadata_file(), "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
         logger.warning(f"Could not read docs registry: {e}")
@@ -40,8 +50,8 @@ def _load_docs_registry() -> List[Dict[str, Any]]:
 def _save_docs_registry(registry: List[Dict[str, Any]]):
     """Save registry of uploaded documents."""
     try:
-        os.makedirs(os.path.dirname(DOCS_METADATA_FILE), exist_ok=True)
-        with open(DOCS_METADATA_FILE, "w", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(_docs_metadata_file()), exist_ok=True)
+        with open(_docs_metadata_file(), "w", encoding="utf-8") as f:
             json.dump(registry, f, indent=2)
     except Exception as e:
         logger.warning(f"Could not write docs registry: {e}")
@@ -132,16 +142,16 @@ def load_vector_store() -> Optional[FAISS]:
         if embedding_model is None:
             raise CustomException("Failed to initialize embedding model.")
 
-        index_file = os.path.join(DB_FAISS_PATH, "index.faiss")
-        if os.path.exists(DB_FAISS_PATH) and os.path.exists(index_file):
-            logger.info(f"Loading existing vector database from '{DB_FAISS_PATH}'...")
+        index_file = os.path.join(_vector_db_path(), "index.faiss")
+        if os.path.exists(_vector_db_path()) and os.path.exists(index_file):
+            logger.info(f"Loading existing vector database from '{_vector_db_path()}'...")
             return FAISS.load_local(
-                DB_FAISS_PATH,
+                _vector_db_path(),
                 embedding_model,
                 allow_dangerous_deserialization=True
             )
         else:
-            logger.warning(f"No vector database found at '{DB_FAISS_PATH}'.")
+            logger.warning(f"No vector database found at '{_vector_db_path()}'.")
             return None
 
     except Exception as e:
@@ -162,9 +172,9 @@ def save_vector_store(text_chunks: List[Document]) -> Optional[FAISS]:
 
         logger.info(f"Creating new vector store with {len(text_chunks)} chunks...")
         db = FAISS.from_documents(text_chunks, embedding_model)
-        os.makedirs(DB_FAISS_PATH, exist_ok=True)
-        db.save_local(DB_FAISS_PATH)
-        logger.info(f"Vector store saved successfully at '{DB_FAISS_PATH}'.")
+        os.makedirs(_vector_db_path(), exist_ok=True)
+        db.save_local(_vector_db_path())
+        logger.info(f"Vector store saved successfully at '{_vector_db_path()}'.")
         return db
 
     except Exception as e:
@@ -185,8 +195,8 @@ def add_documents_to_vector_store(text_chunks: List[Document]) -> FAISS:
         if db is not None:
             logger.info(f"Adding {len(text_chunks)} chunks to existing vector store...")
             db.add_documents(text_chunks)
-            os.makedirs(DB_FAISS_PATH, exist_ok=True)
-            db.save_local(DB_FAISS_PATH)
+            os.makedirs(_vector_db_path(), exist_ok=True)
+            db.save_local(_vector_db_path())
             logger.info("Updated vector store saved successfully to disk.")
             return db
         else:
@@ -202,10 +212,10 @@ def add_documents_to_vector_store(text_chunks: List[Document]) -> FAISS:
 def reset_vector_store():
     """Remove vector store and document registry."""
     try:
-        if os.path.exists(DB_FAISS_PATH):
-            shutil.rmtree(DB_FAISS_PATH, ignore_errors=True)
-        if os.path.exists(DOCS_METADATA_FILE):
-            os.remove(DOCS_METADATA_FILE)
+        if os.path.exists(_vector_db_path()):
+            shutil.rmtree(_vector_db_path(), ignore_errors=True)
+        if os.path.exists(_docs_metadata_file()):
+            os.remove(_docs_metadata_file())
         logger.info("Vector database and document registry reset.")
     except Exception as e:
         logger.error(f"Error resetting vector store: {e}")
@@ -303,13 +313,13 @@ def _rebuild_index_without(document_id: str, filename: str) -> int:
 
     if kept_chunks:
         new_db = FAISS.from_documents(kept_chunks, get_embedding_model())
-        os.makedirs(DB_FAISS_PATH, exist_ok=True)
-        new_db.save_local(DB_FAISS_PATH)
+        os.makedirs(_vector_db_path(), exist_ok=True)
+        new_db.save_local(_vector_db_path())
         return len(kept_chunks)
 
     # Nothing left: remove the index entirely so it cannot serve stale vectors
-    if os.path.exists(DB_FAISS_PATH):
-        shutil.rmtree(DB_FAISS_PATH, ignore_errors=True)
+    if os.path.exists(_vector_db_path()):
+        shutil.rmtree(_vector_db_path(), ignore_errors=True)
     return 0
 
 
@@ -349,11 +359,11 @@ def remove_document_from_vector_store(document_id: str, filename: str = "") -> D
         if remove_ids:
             if _delete_vectors_by_id(db, remove_ids):
                 if db.index is not None and db.index.ntotal > 0:
-                    os.makedirs(DB_FAISS_PATH, exist_ok=True)
-                    db.save_local(DB_FAISS_PATH)
-                elif os.path.exists(DB_FAISS_PATH):
+                    os.makedirs(_vector_db_path(), exist_ok=True)
+                    db.save_local(_vector_db_path())
+                elif os.path.exists(_vector_db_path()):
                     # Nothing left: drop the index so it cannot serve stale vectors
-                    shutil.rmtree(DB_FAISS_PATH, ignore_errors=True)
+                    shutil.rmtree(_vector_db_path(), ignore_errors=True)
             else:
                 _rebuild_index_without(document_id, filename)
 
@@ -376,13 +386,13 @@ def remove_document_from_vector_store(document_id: str, filename: str = "") -> D
 
 def delete_physical_file(file_path: str) -> bool:
     """
-    Safely delete the uploaded file. Only paths inside UPLOAD_FOLDER are allowed,
+    Safely delete the uploaded file. Only paths inside _upload_root() are allowed,
     so a manipulated document record can never delete arbitrary server files.
     """
     if not file_path:
         return False
     try:
-        upload_root = os.path.abspath(UPLOAD_FOLDER)
+        upload_root = os.path.abspath(_upload_root())
         target = os.path.abspath(file_path)
         # Must live inside the uploads folder (no path traversal)
         if not target.startswith(upload_root + os.sep):
@@ -422,7 +432,7 @@ def delete_document(document_id: str) -> Dict[str, Any]:
         # Legacy entries without stored path: try safe join with uploads folder
         try:
             from werkzeug.utils import secure_filename
-            candidate = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
+            candidate = os.path.join(_upload_root(), secure_filename(filename))
             if os.path.exists(candidate):
                 file_path = candidate
         except Exception:
