@@ -111,6 +111,8 @@ MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB limit for broader file types
 
 # OCR Configuration (Indra OCR / PaddleOCR backend)
 OCR_ENABLED = os.environ.get("OCR_ENABLED", "true").lower() == "true"
+OCR_BACKEND = os.environ.get("OCR_BACKEND", "indra").lower()  # indra | tesseract
+OCR_LANG = os.environ.get("OCR_LANG", "eng")
 OCR_THREADS = int(os.environ.get("OCR_THREADS", "4"))
 OCR_DPI = int(os.environ.get("OCR_DPI", "250"))
 OCR_MODE = os.environ.get("OCR_MODE", "auto")  # auto | text | ocr
