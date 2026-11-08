@@ -15,3 +15,5 @@ uploads/
 vector_db/
 data/
 models/
+
+.caddy.env
