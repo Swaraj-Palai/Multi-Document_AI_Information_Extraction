@@ -122,7 +122,7 @@ def load_single_document(file_path: str, original_filename: Optional[str] = None
                                     "document_id": doc_id,
                                     "extraction_method": result.extraction_method,
                                     "ocr_confidence": result.confidence,
-                                    "ocr_engine": "indra"
+                                    "ocr_engine": getattr(result, "engine", "indra")
                                 }
                             ))
                 except Exception as e:
@@ -628,7 +628,7 @@ def load_single_document(file_path: str, original_filename: Optional[str] = None
                                           "file_type": ext.lstrip("."), "document_id": doc_id,
                                           "extraction_method": "ocr",
                                           "ocr_confidence": result.confidence,
-                                          "ocr_engine": "indra"}
+                                          "ocr_engine": getattr(result, "engine", "indra")}
                             ))
                 else:
                     raw_docs.append(Document(
