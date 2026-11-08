@@ -19,3 +19,6 @@ Thumbs.db
 *.log
 /tmp/
 /temp/
+
+# Public demo secrets
+.caddy.env
