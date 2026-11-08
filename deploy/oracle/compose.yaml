@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: ../..
-      dockerfile: deploy/oracle/Dockerfile
+      dockerfile: Dockerfile.oracle
     restart: unless-stopped
     env_file:
       - .env
@@ -29,9 +29,8 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    environment:
-      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME}
-      ACME_EMAIL: ${ACME_EMAIL}
+    env_file:
+      - .env
     ports:
       - "80:80"
       - "443:443"
