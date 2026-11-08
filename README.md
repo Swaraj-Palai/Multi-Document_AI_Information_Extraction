@@ -1,274 +1,370 @@
-# 📑 Universal Document RAG Assistant
+# Universal Multi-Document AI Information Extraction
 
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
-[![Framework](https://img.shields.io/badge/Framework-Flask-red.svg)](https://flask.palletsprojects.com/)
-[![Orchestration](https://img.shields.io/badge/Orchestration-LangChain-green.svg)](https://python.langchain.com/)
-[![Vector Store](https://img.shields.io/badge/Vector%20Store-FAISS-purple.svg)](https://github.com/facebookresearch/faiss)
-[![LLM Acceleration](https://img.shields.io/badge/Inference-Groq%20Cloud-orange.svg)](https://groq.com/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Framework-Flask-red.svg)](https://flask.palletsprojects.com/)
+[![LangChain](https://img.shields.io/badge/RAG-LangChain-green.svg)](https://python.langchain.com/)
+[![FAISS](https://img.shields.io/badge/Vector%20Store-FAISS-purple.svg)](https://github.com/facebookresearch/faiss)
+[![Groq](https://img.shields.io/badge/LLM-Groq-orange.svg)](https://groq.com/)
 
-A generic, high-performance **Document Retrieval-Augmented Generation (RAG)** application. The system enables users to upload **any kind of document** (PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, RTF, EPUB, ODT, PPTX, XLSX, and more) across any domain—such as research papers, agriculture reports, technical manuals, machine learning notes, business plans, or legal contracts—automatically extracts, chunks, and embeds their content, and allows users to ask questions grounded strictly in the uploaded materials with exact document and page citations.
+A Flask-based, multi-document Retrieval-Augmented Generation (RAG) application. Upload supported documents, extract and split their content, index the resulting text chunks in FAISS, and ask questions using document-grounded retrieval and source/page references. The application also includes OCR integration, query understanding and rewriting, conversation-aware follow-ups, persistent chat history, and a general-chat mode when no document index is available.
 
----
-
-## 📌 Architecture & Pipeline
-
-```text
-                  ┌────────────────────────┐
-                  │ Upload PDF / DOCX File │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Text Extraction Engine │
-                  │ (PyPDFLoader/Docx2txt) │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Document Chunking      │
-                  │ (RecursiveSplitter)    │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Semantic Embeddings    │
-                  │ (HuggingFace all-Mini) │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Persistent FAISS Store │
-                  │ (vector_db/db_faiss)   │
-                  └───────────┬────────────┘
-                              │
-                              │ [User asks question]
-                              ▼
-                  ┌────────────────────────┐
-                  │ Semantic Similarity    │
-                  │ Search (Top-K Chunks)  │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Context & Grounding    │
-                  │ System Prompt          │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Groq Cloud LLM         │
-                  │ (Fast Inference)       │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Final Answer + Citations│
-                  │ (Web UI & SQLite DB)   │
-                  └────────────────────────┘
-```
+> **Embedding model:** The default configuration uses **BAAI BGE-M3** for multilingual dense text embeddings. The project also supports a configurable Hugging Face Sentence Transformers model and has a multilingual MiniLM fallback if embedding initialization fails.
 
 ---
 
-## ✨ Key Features
+## Contents
 
-- **Universal Multi-Format Document Ingestion**: Upload **any document type** — PDF, DOCX, TXT, MD, CSV, JSON, HTML, XML, RTF, EPUB, ODT, PPTX, XLSX, and more. Seamlessly works for agriculture, science, engineering, business, law, notes, and research papers.
-- **Robust Text Extraction & Fallbacks**: Utilizes `PyPDFLoader` for PDFs with 1-based page metadata, and `Docx2txtLoader` with automated `python-docx` fallback for complex DOCX tables and formatting.
-- **Configurable Text Chunking**: Chunks text via `RecursiveCharacterTextSplitter` with customizable `CHUNK_SIZE` and `CHUNK_OVERLAP`.
-- **HuggingFace Embeddings**: Uses dense 384-dimensional embeddings (`sentence-transformers/all-MiniLM-L6-v2`) cached in memory to eliminate redundant loads.
-- **Persistent Multi-Document FAISS Index**: Incremental indexing preserves previously uploaded documents so embeddings persist across restarts.
-- **Document Metadata Tracking**: Tracks `source`, `page`, `file_type`, and unique `document_id` for every chunk.
-- **Strict Grounded Answering**: Employs prompt rules ensuring the LLM relies primarily on the context, prevents hallucinations, and states when information is not found.
-- **Normal LLM (General Chat) Mode**: When no documents are uploaded, the app also behaves like a normal LLM — it answers general-knowledge questions from its own training (controlled by `ENABLE_GENERAL_LLM`). All RAG/document-grounded behavior is unchanged when documents exist.
-- **Conversation-aware RAG**: The app remembers previous messages within the same chat and resolves pronouns (it, this, that, they) and follow-ups ("explain more", "give an example", "compare it"). Conversations stay isolated, history is bounded (configurable message/token limits), the original question is preserved for answer generation, and topic shifts are detected. Previous assistant answers are never treated as facts — only uploaded documents provide evidence.
-- **Document & Page Citations**: Displays clickable/pill badges citing the exact document and page number for each retrieved answer.
-- **Persistent Chat History**: SQLite database stores chat sessions with timestamps, question, answer, and sources.
-- **Modern Responsive Web Interface**: Clean UI with real-time processing indicators, document management panel, and AJAX chat interaction.
+- [Features](#features)
+- [Architecture](#architecture)
+- [Embedding model](#embedding-model)
+- [Supported file types and extraction notes](#supported-file-types-and-extraction-notes)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [How document retrieval works](#how-document-retrieval-works)
+- [API overview](#api-overview)
+- [Important implementation notes](#important-implementation-notes)
 
----
+## Features
 
-## 🛠️ Tech Stack
+- **Multi-document ingestion:** Upload supported document formats through the web interface.
+- **Text extraction:** Uses format-specific loaders and extraction fallbacks. PDF processing checks for a usable text layer and can invoke Indra OCR for scanned or image-based pages.
+- **OCR integration:** Indra OCR with a PaddleOCR backend is configurable through environment settings.
+- **Text chunking:** Uses LangChain's Recursive Character Text Splitter and preserves source, page, file type, document ID, and chunk metadata where available.
+- **Multilingual embeddings:** BAAI BGE-M3 is the default embedding model. Embedding instances are cached to avoid repeatedly loading the model.
+- **Persistent vector index:** FAISS stores document vectors locally and supports incremental document indexing.
+- **Query understanding:** A pre-retrieval component analyses the user's question and can suggest retrieval settings.
+- **Query rewriting:** An optional LLM stage can rewrite or expand a query before retrieval.
+- **Conversation-aware RAG:** The application can use earlier messages in the same chat to resolve follow-up questions and references. Conversation history is bounded by configuration.
+- **Grounded answers:** When documents are indexed, retrieved document passages are used as the evidence for the answer. The application can return a not-found response when relevant evidence is unavailable.
+- **General-chat mode:** When no vector store is available, the application can answer general questions if general LLM mode is enabled.
+- **Chat history and document management:** Stores conversations in SQLite and maintains metadata for uploaded documents.
+- **Web interface:** Flask-rendered interface with browser-side JavaScript for chat and document interactions.
 
-- **Backend**: Flask 3.x, Python 3.10+
-- **RAG & Orchestration**: LangChain, LangChain-Community, LangChain-Core
-- **Embeddings**: LangChain-HuggingFace, `sentence-transformers`
-- **Vector Database**: FAISS (`faiss-cpu`)
-- **LLM Inference**: `langchain-groq` (Groq Cloud API)
-- **Document Loaders**: `pypdf`, `python-docx`, `docx2txt`
-- **Database**: SQLite3
-- **Frontend**: HTML5, Vanilla CSS, Vanilla JavaScript (Fetch API)
+## Architecture
 
----
+### Document ingestion and indexing
 
-- **Backend**: Flask 3.x, Python 3.10+
-- **RAG & Orchestration**: LangChain, LangChain-Community, LangChain-Core
-- **Embeddings**: LangChain-HuggingFace, sentence-transformers, BGE-M3
-- **Vector Database**: FAISS (faiss-cpu)
-- **LLM Inference**: langchain-groq (Groq Cloud API)
-- **Document Loaders**: pypdf, python-docx, docx2txt, unstructured, TextLoader, CSVLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, PyMuPDF
-- **OCR**: Indra OCR, PaddleOCR, PyMuPDF (PDFs, images)
-- **Email Parsing**: Standard library email module (EML/MSG/MBOX/PST)
-- **Archive Handling**: zipfile, tarfile, py7zr, rarfile
-- **Database**: SQLite3
-- **Frontend**: HTML5, Vanilla CSS, Vanilla JavaScript (Fetch API)
+~~~text
+Document upload
+      |
+      v
+Format-aware document loader
+      |
+      +---- Digital PDF / office / text content
+      |
+      +---- Scanned PDF pages --> Indra OCR (when available)
+      |
+      v
+Text cleaning and metadata assignment
+      |
+      v
+Recursive character text splitting
+      |
+      v
+BAAI BGE-M3 embedding model (default)
+      |
+      v
+FAISS vector index
+      |
+      v
+Persist index and document metadata
+~~~
 
----
+### Question answering
 
-## 🚀 Getting Started
+~~~text
+User question
+      |
+      v
+Conversation context and query understanding
+      |
+      v
+Optional query rewriting
+      |
+      v
+Embedding + FAISS similarity search
+      |
+      v
+Validate retrieved chunks and document metadata
+      |
+      v
+Build source/page-aware context
+      |
+      v
+Groq-hosted LLM and grounding instructions
+      |
+      v
+Answer + retrieved source references
+~~~
 
-### 1. Clone & Set Up Virtual Environment
+## Embedding model
 
-```bash
-# Create and activate virtual environment
-python -m venv abc
-# Windows:
-abc\Scripts\activate
-# Linux/macOS:
-source abc/bin/activate
-```
+### Default: BAAI BGE-M3
 
-### 2. Install Dependencies
+- **Model ID:** [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)
+- **Provider setting:** EMBEDDING_PROVIDER=bge-m3
+- **Model setting:** EMBEDDING_MODEL=BAAI/bge-m3
+- **Embedding implementation:** Sentence Transformers through a LangChain-compatible wrapper.
+- **Default device:** CPU.
+- **Default batch size:** 1.
+- **Vector type used by this project:** Dense embeddings.
+- **Embedding dimension:** 1024 for the BGE-M3 dense representation.
+- **Normalization:** Enabled for document and query embeddings.
 
-```bash
+The implementation calls Sentence Transformers to encode document text and normalizes the resulting vectors. Query embeddings use the same embedding wrapper. FAISS then performs similarity search against the stored vectors.
+
+BGE-M3 supports dense, sparse, and multi-vector representations as a model family. **This repository currently uses the dense embedding path; it does not implement BGE-M3's sparse or multi-vector retrieval modes.**
+
+### Alternative and fallback model
+
+The generic embedding loader can also use a Hugging Face Sentence Transformers model. The configured non-BGE default and initialization fallback are:
+
+~~~text
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+~~~
+
+To select that model explicitly, set:
+
+~~~env
+EMBEDDING_PROVIDER=sentence-transformers
+EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+~~~
+
+If initialization of the configured embedding model fails, the current embedding loader attempts to initialize the multilingual MiniLM model as a fallback. Check application logs to confirm which model initialized successfully in a particular run.
+
+### Local model download (optional)
+
+The application can load BGE-M3 from the configured local model directory when that directory contains the model configuration. Otherwise, it loads the model ID from Hugging Face.
+
+To download the model locally:
+
+~~~bash
+python scripts/download_bge_m3.py
+~~~
+
+The default local directory is models/bge-m3. It can be changed with BGE_M3_MODEL_PATH.
+
+> **Important:** Use the same embedding model and compatible embedding dimensions for every vector in a FAISS index. If you change embedding models, rebuild the index and re-embed the documents rather than mixing vectors from different models.
+
+## Supported file types and extraction notes
+
+The allowed extensions are defined in the application's configuration. They include:
+
+| Category | Extensions |
+|---|---|
+| PDF and Word | PDF, DOCX, DOC, DOCM, DOTX |
+| Text and markup | TXT, MD, RTF, HTML, HTM, XML, YAML, YML, TOML, INI, LOG, SQL |
+| Structured data | CSV, TSV, JSON |
+| PowerPoint | PPTX, PPT, PPTM, PPSX |
+| Spreadsheets | XLSX, XLS, XLSM, XLSB |
+| OpenDocument | ODT, ODP, ODS |
+| E-books | EPUB, MOBI, AZW3, FB2 |
+| Images | JPG, JPEG, PNG, GIF, BMP, TIFF, TIF, WEBP |
+| Archives | ZIP, RAR, 7Z, TAR, GZ |
+| Email | EML, MSG, MBOX, PST |
+| Other | XPS, H5, PT, PTH, ONNX, GGUF, TFLITE |
+
+**Extraction depends on the format.** Text-bearing files are processed using format-specific loaders or fallback loaders. Scanned PDFs can use Indra OCR when the OCR engine and its dependencies are available. In the current implementation, audio/video files are recorded as metadata placeholders; automatic speech transcription is not configured. Binary machine-learning model files are also recorded as metadata rather than having their internal model contents extracted. Archive extraction is format-dependent and may require optional system or Python dependencies.
+
+The configured maximum request content size is 100 MB by default. Actual successful extraction also depends on the installed dependencies and the content of the uploaded file.
+
+## Tech stack
+
+| Area | Technologies |
+|---|---|
+| Backend | Python, Flask |
+| RAG orchestration | LangChain, LangChain Community, LangChain Core |
+| Embeddings | BAAI BGE-M3, Sentence Transformers, LangChain Hugging Face |
+| Vector store | FAISS CPU |
+| LLM | Groq API through LangChain Groq |
+| PDF and document processing | PyMuPDF, pypdf, python-docx, docx2txt, Unstructured and format-specific loaders |
+| OCR | Indra OCR, PaddleOCR, PaddlePaddle; Tesseract dependencies are also included |
+| Chat persistence | SQLite |
+| Frontend | HTML, CSS, JavaScript |
+
+## Project structure
+
+~~~text
+.
+├── app/
+│   ├── application.py             # Flask application and HTTP routes
+│   ├── common/                    # Logging, exceptions, security helpers
+│   ├── componenets/
+│   │   ├── document_loader.py     # File extraction, cleaning and chunking
+│   │   ├── embeddings.py          # Embedding provider selection and fallback
+│   │   ├── embeddings_bge.py      # BGE-M3 embedding implementation
+│   │   ├── ocr_engine.py          # Indra OCR integration
+│   │   ├── query_rewriter.py      # Query rewriting
+│   │   ├── query_understanding.py # Pre-retrieval query analysis
+│   │   ├── conversation_context.py # Conversation context handling
+│   │   ├── retriver.py             # Retrieval and RAG answer flow
+│   │   ├── vector_store.py        # FAISS index and document metadata
+│   │   └── history.py             # SQLite chat history
+│   ├── config/
+│   │   └── config.py              # Environment-based settings
+│   ├── rag/
+│   │   └── grounded_answer.py     # Grounding and answer support
+│   ├── structured/
+│   │   └── extractor.py          # Structured extraction utilities
+│   ├── static/                    # Static frontend assets
+│   └── templates/
+│       └── index.html             # Main web interface
+├── scripts/
+│   └── download_bge_m3.py         # Optional local BGE-M3 download
+├── req.txt                        # Python dependencies
+├── run.py                         # Application entry point
+└── .env.example                   # Example environment configuration
+~~~
+
+## Getting started
+
+### 1. Clone the repository
+
+~~~bash
+git clone https://github.com/Swaraj-Palai/Multi-Document_AI_Information_Extraction.git
+cd Multi-Document_AI_Information_Extraction
+~~~
+
+### 2. Create and activate a virtual environment
+
+~~~bash
+python -m venv .venv
+~~~
+
+Windows:
+
+~~~powershell
+.\.venv\Scripts\Activate.ps1
+~~~
+
+Linux / macOS:
+
+~~~bash
+source .venv/bin/activate
+~~~
+
+### 3. Install dependencies
+
+~~~bash
+python -m pip install --upgrade pip
 pip install -r req.txt
 pip install -e .
-```
+~~~
 
-### 3. Environment Variables Configuration
+The requirements file includes OCR dependencies. If PaddlePaddle installation fails on your platform, use the CPU installation command appropriate for your Python and operating-system combination from the [PaddlePaddle installation guide](https://www.paddlepaddle.org.cn/en/install/quick).
 
-Copy `.env.example` to `.env` and configure your API keys:
+### 4. Configure environment variables
 
-```bash
+Copy the example environment file:
+
+Windows:
+
+~~~powershell
+Copy-Item .env.example .env
+~~~
+
+Linux / macOS:
+
+~~~bash
 cp .env.example .env
-```
+~~~
 
-Edit `.env`:
+At minimum, add your Groq API key to the .env file:
 
-```env
-# Groq API Configuration (or LLM_API_KEY)
+~~~env
 GROQ_API_KEY=your_groq_api_key_here
 LLM_MODEL=openai/gpt-oss-120b
-LLM_TEMPERATURE=0.2
-LLM_MAX_TOKENS=1000
+~~~
 
-# Embeddings & Vector Store
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-VECTOR_DB_PATH=vector_db/db_faiss
-UPLOAD_FOLDER=uploads
+The repository's .env.example already includes the BGE-M3 provider, model ID, CPU settings, vector-store path, chunking, retrieval, query rewriting, conversation, OCR, and server settings.
 
-# Chunking & Retrieval Parameters
-CHUNK_SIZE=1000
-CHUNK_OVERLAP=200
-TOP_K=4
+### 5. (Optional) Download BGE-M3 before startup
 
-# Server Configuration
-PORT=5000
-HOST=0.0.0.0
-```
+~~~bash
+python scripts/download_bge_m3.py
+~~~
 
-### 4. Run the Application
+This saves the model under the configured BGE_M3_MODEL_PATH. Alternatively, the embedding loader can download/load BAAI/bge-m3 from Hugging Face when no valid local model directory is found.
 
-```bash
+### 6. Run the application
+
+~~~bash
 python run.py
-```
+~~~
 
-The application will start on: `http://localhost:5000`
+The default local address is:
 
----
+http://localhost:5000
 
-## 🌐 API Endpoints
+The host and port can be changed with the HOST and PORT environment variables.
 
-### 1. Document Upload
-- **URL**: `POST /upload`
-- **Content-Type**: `multipart/form-data`
-- **Body**: `file` (PDF or DOCX file)
-- **Response**:
-```json
-{
-  "success": true,
-  "filename": "agriculture.pdf",
-  "file_type": "pdf",
-  "pages": 45,
-  "chunks": 132,
-  "document_id": "agriculture_pdf_a1b2c3d4",
-  "message": "Document processed successfully"
-}
-```
+## Configuration
 
-### 2. Chat / Question Answering
-- **URL**: `POST /chat`
-- **Content-Type**: `application/json`
-- **Body**:
-```json
-{
-  "question": "What is the main objective of this document?"
-}
-```
-- **Response**:
-```json
-{
-  "success": true,
-  "question": "What is the main objective of this document?",
-  "answer": "The main objective is...",
-  "sources": [
-    {
-      "document": "agriculture.pdf",
-      "page": 5,
-      "label": "agriculture.pdf (Page 5)"
-    }
-  ],
-  "chat_id": "chat_abc123",
-  "chat_title": "What is the main objective of this document?",
-  "new_chat": true,
-  "mode": "rag",
-  "conversation_context": {
-    "chat_id": "chat_abc123",
-    "original_question": "What are its advantages?",
-    "contextualized_question": "What are the advantages of the BGE-M3 multilingual embedding model?",
-    "references_resolved": ["its -> BGE-M3"],
-    "is_follow_up": true,
-    "topic_shift_detected": false,
-    "context_used": true,
-    "resolution_method": "rule-based"
-  },
-  "contextualized_question": "What are the advantages of the BGE-M3 multilingual embedding model?"
-}
-```
-- `mode` is `"rag"` when the answer is grounded in uploaded documents, or `"general"` when no documents are uploaded and the app answers like a normal LLM from its own training (controlled by `ENABLE_GENERAL_LLM`).
-- `conversation_context` contains the resolved references, follow-up detection, and the contextualized question used for retrieval. The original question is always preserved for final answer generation.
+The main configuration is read from environment variables in app/config/config.py. The following settings are especially relevant:
 
-### 3. List Indexed Documents
-- **URL**: `GET /documents`
-- **Response**:
-```json
-{
-  "success": true,
-  "documents": [
-    {
-      "filename": "agriculture.pdf",
-      "file_type": "pdf",
-      "pages": 45,
-      "chunks": 132,
-      "status": "Ready"
-    }
-  ]
-}
-```
+| Variable | Example / default | Purpose |
+|---|---|---|
+| EMBEDDING_PROVIDER | bge-m3 | Selects BGE-M3 or the Hugging Face embedding route |
+| EMBEDDING_MODEL | BAAI/bge-m3 | Embedding model ID |
+| BGE_M3_MODEL_PATH | ./models/bge-m3 | Optional local BGE-M3 model directory |
+| BGE_M3_DEVICE | cpu | Device used to load BGE-M3 |
+| BGE_M3_BATCH_SIZE | 1 | BGE-M3 encoding batch size |
+| VECTOR_DB_PATH | vector_db/db_faiss | Persistent FAISS index directory |
+| CHUNK_SIZE | 1000 | Text chunk size |
+| CHUNK_OVERLAP | 200 in .env.example | Overlap between chunks |
+| TOP_K | 4 in .env.example | Number of relevant chunks requested by default in the example configuration |
+| ENABLE_QUERY_REWRITING | true | Enables the optional query-rewriting stage |
+| ENABLE_GENERAL_LLM | true | Allows general chat when no vector store is available |
+| GENERAL_FALLBACK_WHEN_NO_MATCH | false | Keeps document answers grounded when no relevant chunks are found |
+| CONVERSATION_AWARE_ENABLED | true | Enables conversation-aware follow-up handling |
+| OCR_ENABLED | true | Enables the OCR integration |
+| OCR_MODE | auto | Indra OCR mode |
+| PORT | 5000 | Web server port |
+| HOST | 0.0.0.0 | Web server host |
 
-### 4. Clear Documents / Reset Vector Store
-- **URL**: `POST /reset-documents`
+Values in .env override the fallback values in the Python configuration. See .env.example for the complete set of supported settings.
+
+## How document retrieval works
+
+1. A user uploads a document using the web interface.
+2. The loader extracts text and attaches document metadata such as filename, page, file type, and document ID.
+3. Extracted content is cleaned and divided into overlapping chunks.
+4. The configured embedding model converts each chunk into a vector.
+5. The vectors and associated LangChain document records are stored in the local FAISS index.
+6. For a question, the application prepares conversation context and runs query understanding. Query rewriting may run when enabled and appropriate.
+7. FAISS similarity search retrieves candidate chunks. The application checks retrieved metadata against the active document registry and any selected-document filter.
+8. The retrieved passages are assembled into context for the grounded-answer stage and sent to the configured Groq LLM.
+9. The response includes source information derived from retrieved document metadata.
+
+When no vector store is available, general-chat behavior is controlled by ENABLE_GENERAL_LLM. When documents exist but no relevant chunks are found, GENERAL_FALLBACK_WHEN_NO_MATCH is false by default in the example configuration, preserving the document-grounded not-found behavior.
+
+## API overview
+
+The Flask application exposes routes for the web interface and document/chat operations. The primary routes include:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | / | Render the main interface |
+| POST | /upload | Upload, extract, chunk and index a document |
+| POST | /chat | Submit a chat question |
+| GET | /documents | List uploaded document metadata |
+| POST | /reset-documents | Reset the FAISS vector store and document registry |
+
+For exact request fields and response structures, refer to the route handlers in app/application.py.
+
+## Important implementation notes
+
+- **Model and index compatibility:** All vectors in a FAISS index must come from the same embedding model and compatible dimensions. Rebuild/re-embed the index after changing embedding models.
+- **Runtime model confirmation:** The configured default is BGE-M3, but environment variables can override it. If BGE-M3 initialization fails, the current loader attempts the multilingual MiniLM fallback. Review application logs to verify the model that actually loaded.
+- **Dense retrieval only:** The current BGE-M3 integration uses dense vectors with FAISS. Sparse and multi-vector BGE-M3 retrieval are not wired into this implementation.
+- **Maximum sequence length setting:** BGE_M3_MAX_LENGTH is present in the configuration, but the current Sentence Transformers loader does not explicitly assign it to the loaded model's max_seq_length. Do not assume that changing this environment variable currently changes the active model limit.
+- **OCR availability:** Scanned-PDF OCR depends on Indra OCR and its runtime dependencies being installed and initialized successfully.
+- **File-format behavior:** An accepted extension does not guarantee that every file's internal content can be extracted. Some binary and media formats are metadata-only in the current implementation.
 
 ---
 
-## 🧪 Testing the Application
+## License
 
-### Sample Documents & Questions:
-1. **Agriculture PDF (`agriculture_report.pdf`)**:
-   - *Question*: "By how much does drip irrigation reduce evaporation?"
-   - *Expected Answer*: "Drip irrigation reduces evaporation by 45 percent." (Source: `agriculture_report.pdf (Page 1)`)
-2. **Machine Learning DOCX (`machine_learning_notes.docx`)**:
-   - *Question*: "What causes overfitting and how can it be prevented?"
-   - *Expected Answer*: "Overfitting occurs when a model learns training data noise... Prevented with regularization, dropout, early stopping." (Source: `machine_learning_notes.docx`)
-3. **Out-of-Scope Query ("Information Not Found")**:
-   - *Question*: "What is the capital of Mars and its temperature in 2050?"
-   - *Expected Answer*: Clearly states the information was not found in the uploaded documents.
-
+No license file was present in the repository at the time this README was updated. Check with the repository owner before reusing or distributing this project.
